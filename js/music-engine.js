@@ -10,6 +10,7 @@ export function compose({genre='adventure',mood='balanced',bpm=92,duration=30,in
  const seed=(Math.random()*0xffffffff)>>>0,rand=rng(seed),choose=a=>a[Math.floor(rand()*a.length)];
  const scale=(mood==='dark'?[0,1,3,5,6,8,10]:mood==='hopeful'?[0,2,4,5,7,9,11]:mood==='chaotic'?[0,1,2,5,6,8,11]:mood==='calm'?[0,2,4,7,9]:SCALES[genre]||SCALES.adventure).slice();
  const root=ROOTS[genre]??52,beat=60/bpm,step=beat/2,barDur=beat*4,totalBars=Math.max(3,Math.ceil(duration/barDur)),events=[];
+ const add=(t,d,n,v,type)=>{if(t<duration+.01)events.push({t,d,n,v,type})};
  const progression=PROG[genre]||PROG.adventure;
  const melodyTypes=instruments.filter(x=>['piano','bells','flute','brass'].includes(x));
  // Each genre gets a different rhythmic vocabulary and melodic contour, not just a different sound.
