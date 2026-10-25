@@ -27,7 +27,7 @@ No build step, API key, or paid service is required.
 
 - This is a procedural prototype, not a trained AI music model.
 - Instrument sounds are synthesized approximations, not realistic recorded instrument libraries.
-- The engine now uses a fresh seed per generation, a recurring motif with variations, genre-specific scales/progressions, changing section density and different percussion patterns. These changes increase variation but do not guarantee every track will sound professional or completely unlike every other track.
+- The engine uses a fresh seed per generation, recurring motifs with variations, genre-specific scales/progressions, changing section density and percussion patterns. Sound design includes layered oscillators, filtered noise for percussion, subtle stereo placement and a light delay effect. These changes improve variation and texture but do not guarantee professional quality or realistic instrument sounds.
 - Generated music does not guarantee legal exclusivity or zero similarity risk.
 - Next steps: improve musical phrasing and transitions, richer sound synthesis/sample options, longer compositions, saveable project settings, loop-safe game music and dedicated sound-effects generation.
 
