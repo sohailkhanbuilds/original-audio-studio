@@ -13,7 +13,7 @@ export function compose({genre='adventure',mood='balanced',bpm=92,duration=30,in
  const root=ROOTS[genre]??52,beat=60/bpm,step=beat/2,barDur=beat*4,totalBars=Math.max(3,Math.ceil(duration/barDur)),events=[];
  const progression=PROG[genre]||PROG.adventure;
  // Compose a short motif first, then repeat it with controlled transformations for musical identity.
- const motif=Array.from({length:8},(_,i)=>({degree:choose(scale.map((_,j)=>j)),rest:rand()<(genre==='horror'?.28:.12),len:choose([.55,.8,1,1.35])}));
+ const motif=Array.from({length:8},(_,i)=>({degree:choose(scale.map((_,j)=>j)),rest:rand()<(genre==='horror' ? 0.28 : 0.12),len:choose([.55,.8,1,1.35])}));
  motif[0].rest=false;motif[4].rest=false;
  const melodyTypes=instruments.filter(x=>['piano','bells','flute','brass'].includes(x));
  const add=(t,d,n,v,type)=>{if(t<duration+.01)events.push({t,d,n,v,type})};
@@ -22,7 +22,7 @@ export function compose({genre='adventure',mood='balanced',bpm=92,duration=30,in
   const chordDegree=progression[bar%progression.length],base=root-12+scale[chordDegree%scale.length];
   const chordQuality=(genre==='horror'||genre==='survival'||mood==='dark')?'minor':genre==='funny'?'major':(chordDegree===5?'minor':'major');
   const triad=CHORDS[chordQuality]||CHORDS.major;
-  const energy=section==='intro'?.58:section==='climax'?1.18:section==='outro'?.5:1;
+  const energy=section==='intro' ? 0.58 : section==='climax' ? 1.18 : section==='outro' ? 0.5 : 1;
   // Harmonic bed with small voicing shifts; use fewer layers at intro/outro.
   if(instruments.includes('pad'))triad.forEach((interval,i)=>add(bar*barDur,barDur*.94,base+interval+12+(i===1?12:0),.035*energy,'pad'));
   if(instruments.includes('strings')&&(section!=='intro'||bar===0))triad.forEach((interval,i)=>add(bar*barDur+.02,barDur*.88,base+interval+12+(i===2?12:0),.055*energy,'strings'));
@@ -49,9 +49,9 @@ export function compose({genre='adventure',mood='balanced',bpm=92,duration=30,in
    for(let i=0;i<8;i++){
     const at=bar*barDur+i*step,beatIndex=i%4;
     let kick=genre==='racing'?[0,2,4,6].includes(i):genre==='funny'?[0,3,4,7].includes(i):[0,4].includes(i);
-    if(kick&&rand()<(section==='intro'?.55:section==='climax'?.98:.82))add(at,.15,36,.13*energy,'kick');
+    if(kick&&rand()<(section==='intro' ? 0.55 : section==='climax' ? 0.98 : 0.82))add(at,.15,36,.13*energy,'kick');
     if([2,6].includes(i)&&rand()<(genre==='horror'?.48:.82))add(at,.12,38,.09*energy,'snare');
-    if((genre==='racing'||genre==='funny'||i%2===1)&&rand()<(section==='outro'?.3:.85))add(at,.045,42,.035*energy,'hat');
+    if((genre==='racing'||genre==='funny'||i%2===1)&&rand()<(section==='outro' ? 0.3 : 0.85))add(at,.045,42,.035*energy,'hat');
    }
   }
   if((genre==='horror'||genre==='survival')&&instruments.includes('pad'))add(bar*barDur,barDur*.95,root-24,.04,'drone');
