@@ -8,56 +8,76 @@ const pick=a=>a[Math.floor(Math.random()*a.length)],hz=n=>440*2**((n-69)/12);
 function rng(seed){let x=seed>>>0;return()=>{x+=0x6D2B79F5;let t=x;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}}
 export function compose({genre='adventure',mood='balanced',bpm=92,duration=30,instruments=['piano','strings','bass','drums']}){
  const seed=(Math.random()*0xffffffff)>>>0,rand=rng(seed),choose=a=>a[Math.floor(rand()*a.length)];
- let scale=(SCALES[genre]||SCALES.adventure).slice();
- if(mood==='dark')scale=[0,1,3,5,6,8,10];if(mood==='hopeful')scale=[0,2,4,5,7,9,11];if(mood==='chaotic')scale=[0,1,2,5,6,8,11];if(mood==='calm')scale=[0,2,4,7,9];
+ const scale=(mood==='dark'?[0,1,3,5,6,8,10]:mood==='hopeful'?[0,2,4,5,7,9,11]:mood==='chaotic'?[0,1,2,5,6,8,11]:mood==='calm'?[0,2,4,7,9]:SCALES[genre]||SCALES.adventure).slice();
  const root=ROOTS[genre]??52,beat=60/bpm,step=beat/2,barDur=beat*4,totalBars=Math.max(3,Math.ceil(duration/barDur)),events=[];
  const progression=PROG[genre]||PROG.adventure;
- // Compose a short motif first, then repeat it with controlled transformations for musical identity.
- const motif=Array.from({length:8},(_,i)=>({degree:choose(scale.map((_,j)=>j)),rest:rand()<(genre==='horror' ? 0.28 : 0.12),len:choose([.55,.8,1,1.35])}));
- motif[0].rest=false;motif[4].rest=false;
  const melodyTypes=instruments.filter(x=>['piano','bells','flute','brass'].includes(x));
- const add=(t,d,n,v,type)=>{if(t<duration+.01)events.push({t,d,n,v,type})};
+ // Each genre gets a different rhythmic vocabulary and melodic contour, not just a different sound.
+ const profiles={
+  horror:{rhythm:[0,3,6,7],contour:[0,2,1,5,3,1,4,0],rest:.38,octave:0},
+  funny:{rhythm:[0,1,3,4,6,7],contour:[0,4,2,6,1,5,3,7],rest:.08,octave:1},
+  adventure:{rhythm:[0,2,3,5,6],contour:[0,2,4,3,5,4,2,1],rest:.13,octave:1},
+  scifi:{rhythm:[0,2,5,7],contour:[0,3,6,2,5,1,4,6],rest:.28,octave:1},
+  racing:{rhythm:[0,1,2,4,5,6,7],contour:[0,0,3,5,2,6,4,1],rest:.04,octave:1},
+  survival:{rhythm:[0,3,4,7],contour:[0,3,2,5,1,4,2,0],rest:.32,octave:0}
+ };
+ const p=profiles[genre]||profiles.adventure;
+ // Build a distinct phrase with a beginning, rise, and resolution; each 2-bar phrase varies it.
+ const motif=p.contour.map((v,i)=>({degree:v%scale.length,rest:rand()<p.rest,len:choose(genre==='racing'?[.35,.5,.65]:genre==='horror'?[.8,1.2,1.6]:[.5,.75,1,1.25])}));
+ motif[0].rest=false;motif[7].rest=false;
  for(let bar=0;bar<totalBars;bar++){
-  const section=bar/totalBars<.22?'intro':bar/totalBars>.78?'outro':bar/totalBars>.56?'climax':'theme';
+  const progress=bar/totalBars,section=progress<.18?'intro':progress>.82?'outro':progress>.58?'climax':progress>.35?'variation':'theme';
   const chordDegree=progression[bar%progression.length],base=root-12+scale[chordDegree%scale.length];
-  const chordQuality=(genre==='horror'||genre==='survival'||mood==='dark')?'minor':genre==='funny'?'major':(chordDegree===5?'minor':'major');
+  const isMinor=['horror','survival','scifi'].includes(genre)||mood==='dark';
+  const chordQuality=isMinor?'minor':genre==='funny'?'major':(chordDegree===5?'minor':'major');
   const triad=CHORDS[chordQuality]||CHORDS.major;
-  const energy=section==='intro' ? 0.58 : section==='climax' ? 1.18 : section==='outro' ? 0.5 : 1;
-  // Harmonic bed with small voicing shifts; use fewer layers at intro/outro.
-  if(instruments.includes('pad'))triad.forEach((interval,i)=>add(bar*barDur,barDur*.94,base+interval+12+(i===1?12:0),.035*energy,'pad'));
-  if(instruments.includes('strings')&&(section!=='intro'||bar===0))triad.forEach((interval,i)=>add(bar*barDur+.02,barDur*.88,base+interval+12+(i===2?12:0),.055*energy,'strings'));
-  if(instruments.includes('bass')){add(bar*barDur,beat*1.65,base-12,.16*energy,'bass');if(genre==='racing'||genre==='funny')add(bar*barDur+beat*2,beat*.8,base-12,.12*energy,'bass')}
-  // Motif repetition plus transposition/occasional passing notes keeps phrases related, not identical.
-  const motifShift=bar%4===2?2:bar%4===3?-1:0;
-  for(let i=0;i<8;i++){
-   const item=motif[(i+(bar%2===1?2:0))%motif.length],at=bar*barDur+i*step;
-   if(item.rest&&rand()<.78)continue;
-   if(section==='intro'&&i>3&&rand()<.65)continue;
-   if(section==='outro'&&i>4&&rand()<.75)continue;
-   if(!melodyTypes.length)continue;
-   let degree=(item.degree+motifShift+(bar%3===1&&rand()<.35?choose([-2,1,2]):0)+scale.length*4)%scale.length;
-   let note=root+12+scale[degree]+(section==='climax'&&rand()<.28?12:0);
-   let type=choose(melodyTypes);
-   if(genre==='funny'&&rand()<.35&&instruments.includes('bells'))type='bells';
-   if(genre==='horror'&&rand()<.25&&instruments.includes('bells'))type='bells';
-   const accent=(i===0||i===4)?1.2:1;
-   add(at,step*item.len,note,.105*energy*accent,type);
-   if(section==='climax'&&rand()<.18)add(at+step*.25,step*.4,note+scale[choose([1,2,4])%scale.length],.055,'bells');
+  const energy=section==='intro'?.48:section==='climax'?1.15:section==='outro'?.42:1;
+  if(instruments.includes('pad'))triad.forEach((n,i)=>add(bar*barDur,barDur*.94,base+n+12+(i===1?12:0),.028*energy,'pad'));
+  if(instruments.includes('strings')&&(section!=='intro'||bar===0))triad.forEach((n,i)=>add(bar*barDur+.02,barDur*.88,base+n+12+(i===2?12:0),.045*energy,'strings'));
+  if(instruments.includes('bass')){
+   const bassNote=base-12;
+   add(bar*barDur,genre==='racing'?beat*.8:beat*1.6,bassNote,.15*energy,'bass');
+   if(genre==='racing'||genre==='funny')for(const beatNo of (genre==='racing'?[1,2,3]:[2]))add(bar*barDur+beat*beatNo,beat*.55,bassNote,.10*energy,'bass');
+   else if(genre==='adventure'&&bar%2===1)add(bar*barDur+beat*2,beat*.75,bassNote+7,.09*energy,'bass');
   }
-  // Genre-specific drum patterns with section-level variation.
+  for(let i=0;i<8;i++){
+   if(!p.rhythm.includes(i)&&rand()<(genre==='racing'?.45:.72))continue;
+   const item=motif[(i+(bar%2?2:0))%motif.length],at=bar*barDur+i*step;
+   if(item.rest&&rand()<.85)continue;
+   if(section==='intro'&&i>3&&rand()<.7)continue;
+   if(section==='outro'&&i>4&&rand()<.8)continue;
+   if(!melodyTypes.length)continue;
+   let degree=item.degree;
+   // Phrase-level transposition and contour changes prevent the same 8 notes looping unchanged.
+   if(section==='variation')degree=(degree+(i%2?2:scale.length-2))%scale.length;
+   if(section==='climax')degree=(degree+1+(i>3?1:0))%scale.length;
+   if(bar%4===3)degree=(degree+choose([-1,0,1]))%scale.length;
+   degree=(degree+scale.length)%scale.length;
+   let note=root+12+scale[degree]+(p.octave&&section==='climax'&&rand()<.48?12:0);
+   let type=choose(melodyTypes);
+   if(genre==='funny'&&instruments.includes('bells')&&rand()<.55)type='bells';
+   if(genre==='horror'&&instruments.includes('bells')&&rand()<.22)type='bells';
+   if(genre==='scifi'&&instruments.includes('flute')&&rand()<.45)type='flute';
+   add(at,step*item.len,note,.10*energy*((i===0||i===4)?1.18:1),type);
+   if(section==='climax'&&rand()<.13)add(at+step*.25,step*.35,note+scale[choose([1,2,4])%scale.length],.045,'bells');
+  }
   if(instruments.includes('drums')){
    for(let i=0;i<8;i++){
-    const at=bar*barDur+i*step,beatIndex=i%4;
-    let kick=genre==='racing'?[0,2,4,6].includes(i):genre==='funny'?[0,3,4,7].includes(i):[0,4].includes(i);
-    if(kick&&rand()<(section==='intro' ? 0.55 : section==='climax' ? 0.98 : 0.82))add(at,.15,36,.13*energy,'kick');
-    if([2,6].includes(i)&&rand()<(genre==='horror'?.48:.82))add(at,.12,38,.09*energy,'snare');
-    if((genre==='racing'||genre==='funny'||i%2===1)&&rand()<(section==='outro' ? 0.3 : 0.85))add(at,.045,42,.035*energy,'hat');
+    const at=bar*barDur+i*step;
+    let kick=genre==='racing'?[0,2,4,6].includes(i):genre==='funny'?[0,3,4,7].includes(i):genre==='scifi'?[0,5]:[0,4].includes(i);
+    if(kick&&rand()<(section==='intro'?.35:section==='climax'?.98:.78))add(at,.14,36,.12*energy,'kick');
+    const snareSlots=genre==='racing'?[2,6]:genre==='horror'?[3,7]:[2,6];
+    if(snareSlots.includes(i)&&rand()<(genre==='horror'?.45:.8))add(at,.12,38,.08*energy,'snare');
+    const hatSlot=genre==='horror'||genre==='survival'?i===7:genre==='scifi'?i%4===2:(genre==='racing'||genre==='funny'?true:i%2===1);
+    if(hatSlot&&rand()<(section==='outro'?.25:.78))add(at,.045,42,.03*energy,'hat');
    }
   }
   if((genre==='horror'||genre==='survival')&&instruments.includes('pad'))add(bar*barDur,barDur*.95,root-24,.04,'drone');
  }
- // A final resolving note helps the ending feel intentional.
- if(melodyTypes.length)add(Math.max(0,duration-beat*.7),beat*.65,root+12,.07,choose(melodyTypes));
+ if(melodyTypes.length){
+  const ending=genre==='horror'||genre==='survival'?root+11:root+12;
+  add(Math.max(0,duration-beat*.7),beat*.65,ending,.07,choose(melodyTypes));
+ }
  return{genre,mood,bpm,duration,instruments,events:events.sort((a,b)=>a.t-b.t),seed,sections:['intro','theme','variation','climax','outro']};
 }
 const cfg={piano:{wave:'triangle',decay:2.2,cut:2600,partials:[1,.28,.12]},strings:{wave:'sawtooth',decay:3.4,cut:1800,partials:[1,.32]},bass:{wave:'triangle',decay:1.4,cut:650,partials:[1,.18]},bells:{wave:'sine',decay:2.4,cut:5000,partials:[1,.48,.22,.1]},flute:{wave:'sine',decay:1.7,cut:2200,partials:[1,.12]},brass:{wave:'sawtooth',decay:1.25,cut:1500,partials:[1,.42,.18]},pad:{wave:'sawtooth',decay:3.8,cut:1200,partials:[1,.2]},kick:{wave:'sine',decay:.18,cut:240,partials:[1]},snare:{wave:'triangle',decay:.16,cut:4800,partials:[1]},hat:{wave:'square',decay:.055,cut:7500,partials:[1]},drone:{wave:'sine',decay:4.5,cut:420,partials:[1,.15]}};
