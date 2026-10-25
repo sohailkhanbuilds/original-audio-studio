@@ -64,7 +64,7 @@ export function compose({genre='adventure',mood='balanced',bpm=92,duration=30,in
   if(instruments.includes('drums')){
    for(let i=0;i<8;i++){
     const at=bar*barDur+i*step;
-    let kick=genre==='racing'?[0,2,4,6].includes(i):genre==='funny'?[0,3,4,7].includes(i):genre==='scifi'?[0,5]:[0,4].includes(i);
+    let kick=genre==='racing'?[0,2,4,6].includes(i):genre==='funny'?[0,3,4,7].includes(i):genre==='scifi'?[0,5].includes(i):[0,4].includes(i);
     if(kick&&rand()<(section==='intro'?.35:section==='climax'?.98:.78))add(at,.14,36,.12*energy,'kick');
     const snareSlots=genre==='racing'?[2,6]:genre==='horror'?[3,7]:[2,6];
     if(snareSlots.includes(i)&&rand()<(genre==='horror'?.45:.8))add(at,.12,38,.08*energy,'snare');
